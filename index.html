@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Amal Yaumi — daily worship log</title>
+<meta name="description" content="A private, offline daily worship log.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#0f766e">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <button id="btn-nav" type="button" class="nav-btn" aria-label="Open history">History</button>
+  <h1><button id="btn-home-title" type="button" class="app-title-btn">Amal Yaumi</button></h1>
+  <button id="btn-settings" type="button" class="icon-btn settings-btn" aria-haspopup="dialog" aria-label="Settings">
+    <span class="hamburger-icon"><span></span><span></span><span></span></span>
+  </button>
+</header>
+
+<div id="settings-overlay" class="settings-overlay hidden">
+  <div id="settings-panel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="settings-header">
+      <h2 id="settings-title">Settings</h2>
+      <button id="btn-settings-close" type="button" class="icon-btn" aria-label="Close settings">&times;</button>
+    </div>
+
+    <div class="settings-row settings-row-column">
+      <span class="settings-row-label" id="lbl-quran-unit">Quran reading unit
+        <span>Used for new entries; past entries keep their own unit.</span></span>
+      <div class="settings-segmented" role="group" aria-labelledby="lbl-quran-unit">
+        <button type="button" class="segmented-btn" data-quran-unit="ayat">Ayat</button>
+        <button type="button" class="segmented-btn" data-quran-unit="pages">Pages</button>
+        <button type="button" class="segmented-btn" data-quran-unit="minutes">Minutes</button>
+      </div>
+    </div>
+
+    <div class="settings-row settings-row-column">
+      <span class="settings-row-label">Activities to track
+        <span>The five prayers are always shown. Hiding keeps saved data.</span></span>
+      <div class="toggle-list" id="toggle-list"></div>
+    </div>
+
+    <div class="settings-row">
+      <span class="settings-row-label">Infaq amount
+        <span>Optional field next to “Done”.</span></span>
+      <label class="switch"><input type="checkbox" id="set-infaq-amount" aria-label="Track infaq amount"><span class="switch-slider"></span></label>
+    </div>
+    <div class="settings-row hidden" id="row-currency">
+      <label class="settings-row-label" for="set-currency">Currency label</label>
+      <input id="set-currency" class="text-input small" maxlength="8" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="settings-row settings-row-column">
+      <span class="settings-row-label">Backup
+        <span>Data lives only in this browser. Clearing site data or losing the device erases it — export a backup now and then.</span></span>
+      <div class="btn-row">
+        <button id="btn-export" type="button" class="btn">Export backup</button>
+        <button id="btn-import" type="button" class="btn">Import backup</button>
+        <input id="file-import" type="file" accept="application/json,.json" hidden>
+      </div>
+      <p id="backup-status" class="hint-text"></p>
+      <div id="import-box" class="import-box hidden">
+        <p id="import-msg" class="hint-text" role="status"></p>
+        <div id="import-actions" class="btn-row hidden">
+          <button id="btn-merge" type="button" class="btn">Merge</button>
+          <button id="btn-replace" type="button" class="btn">Replace all</button>
+          <button id="btn-import-cancel" type="button" class="btn ghost">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-row settings-row-column">
+      <span class="settings-row-label">Install as app<span>Works offline after the first load.</span></span>
+      <button id="btn-install" type="button" class="settings-install-btn hidden">Install</button>
+      <p id="install-hint" class="settings-install-hint hidden"></p>
+    </div>
+
+    <div class="settings-row settings-row-column">
+      <p class="about-app">Amal Yaumi<span id="about-version" class="about-version"></span></p>
+      <p class="hint-text">A private logbook. No account, no tracking, nothing leaves your device.</p>
+      <a class="about-link" href="CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+    </div>
+  </div>
+</div>
+
+<main id="app" tabindex="-1"></main>
+
+<script src="js/storage.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
