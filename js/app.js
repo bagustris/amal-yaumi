@@ -24,7 +24,7 @@ const STATE_LABELS = {
 // Symbols only supplement the text label.
 const STATE_SYMBOL = { mosque_jamaah: '●', other_jamaah: '◐', alone: '○', not_performed: '–' };
 const FAST_TYPE_LABELS = { ramadan: 'Ramadan', qada: 'Qada', sunnah: 'Sunnah', other: 'Other' };
-const QUICK = { rawatib: [2, 4, 8, 12], dhuha: [2, 4, 8], witr: [1, 3, 5], ayat: [1, 3, 5, 10], pages: [1, 2, 5, 10], minutes: [5, 10, 15, 30] };
+const QUICK = { rawatib: [2, 4, 8, 12], dhuha: [2, 4, 8], witr: [1, 3, 5], ayat: [1, 3, 5, 10], pages: [1, 2, 5, 10, 20], minutes: [5, 10, 15, 30] };
 
 const ACTIVITIES = [
   { key: 'showRawatib', label: 'Rawatib' },
@@ -149,7 +149,13 @@ function counterCard(key, title, hint) {
   return h('section', { class: 'card counter' },
     h('div', { class: 'row-head' },
       h('h3', { text: title }),
-      h('span', { class: 'unit-tag', text: hint || unit })),
+      key === 'quran'
+        ? h('div', { class: 'unit-switch', role: 'group', 'aria-label': 'Reading unit' },
+          AmalStore.QURAN_UNITS.map((u) => h('button', {
+            type: 'button', class: 'unit-opt' + (u === unit ? ' on' : ''), 'aria-pressed': String(u === unit),
+            'data-act': 'quran-unit', 'data-val': u, 'data-fid': `unit-${u}`,
+          }, u[0].toUpperCase() + u.slice(1))))
+        : h('span', { class: 'unit-tag', text: hint || unit })),
     h('div', { class: 'stepper' },
       h('button', { type: 'button', class: 'step-btn', 'data-act': 'dec', 'data-key': key, 'data-fid': `dec-${key}`, 'aria-label': `Decrease ${title}` }, '−'),
       h('input', {
@@ -164,7 +170,8 @@ function counterCard(key, title, hint) {
         type: 'button', class: 'chip' + (value === q ? ' on' : ''), 'aria-pressed': String(value === q),
         'data-act': 'set', 'data-key': key, 'data-val': q, 'data-fid': `q-${key}-${q}`,
       }, String(q))),
-      value !== null && h('button', { type: 'button', class: 'chip clear', 'data-act': 'clear', 'data-key': key, 'data-fid': `clr-${key}` }, 'Clear')));
+      value !== null && h('button', { type: 'button', class: 'chip clear', 'data-act': 'clear', 'data-key': key, 'data-fid': `clr-${key}` }, 'Clear')),
+    key === 'quran' && value !== null && h('p', { class: 'hint-text', text: 'Changing the unit clears this day’s value, since it can’t be converted.' }));
 }
 
 function prayersCard() {
@@ -706,6 +713,10 @@ function onClick(e) {
     }
     case 'period':
       state.period = val;
+      return render();
+    case 'quran-unit':
+      SettingsManager.set('quranUnit', val);
+      if (state.day.quran.value !== null && state.day.quran.unit !== val) setCount('quran', null);
       return render();
     case 'hist-tab': state.histTab = val; return render();
     case 'gran': state.gran = val; state.sel = null; return render();

@@ -9,6 +9,17 @@ The version shown in the app's Settings → About panel is read from the latest
 entry below (see `loadAppVersion()` in `js/app.js`), so this file is the single
 source of truth for the app version.
 
+## [0.3.3] - 2026-11-06
+
+### Added
+- 20-page quick value for Quran reading.
+- Change the reading unit directly on the Quran card (clears that day's value, since units can't be converted).
+
+## [0.3.2] - 2026-11-06
+
+### Fixed
+- "Mosque jamaah" option in the prayer picker was white text on a light background.
+
 ## [0.3.1] - 2026-11-06
 
 ### Fixed

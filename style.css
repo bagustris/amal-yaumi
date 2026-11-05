@@ -658,3 +658,17 @@ button:disabled { opacity: 0.4; cursor: default; }
 .dist-n { width: 1.8rem; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
 .seg-group:has([data-act=gran]) .seg::before, .tabs .seg::before { content: none; }
 .bar-val.pill { left: 50%; right: auto; transform: translate(-50%, 50%); padding: 0 3px; border-radius: 4px; background: var(--card-bg); box-shadow: 0 0 0 1px var(--border); }
+
+/* Options in the open prayer panel: neutral text on a light fill (the state
+   fills above are for the collapsed button only), selection shown by tint + ring. */
+.choices .choice, .choices .choice.s-mosque_jamaah, .choices .choice.s-other_jamaah,
+.choices .choice.s-alone, .choices .choice.s-not_performed, .choices .choice.s-none {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--border); font-weight: 400; font-style: normal;
+}
+.choices .choice .sym { color: var(--accent-ink); }
+.choices .choice.on { background: var(--tint); border-color: var(--accent); font-weight: 600; box-shadow: 0 0 0 2px var(--gold); }
+.choices .choice.on::after { content: '✓'; color: var(--accent-ink); }
+
+.unit-switch { display: flex; gap: 2px; padding: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 999px; }
+.unit-opt { min-height: 32px; padding: 0 0.65rem; background: none; border: none; border-radius: 999px; font-size: 0.78rem; color: var(--muted); cursor: pointer; }
+.unit-opt.on { background: var(--accent); color: #fff; font-weight: 600; }
