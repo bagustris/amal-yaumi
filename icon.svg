@@ -3,7 +3,13 @@
   <g transform="translate(256 256)">
     <rect x="-118" y="-118" width="236" height="236" fill="none" stroke="#e9c46a" stroke-width="14"/>
     <rect x="-118" y="-118" width="236" height="236" fill="none" stroke="#e9c46a" stroke-width="14" transform="rotate(45)"/>
-    <circle r="52" fill="#faf7f2"/>
-    <circle r="26" fill="#0f766e"/>
+    <g fill="#faf7f2">
+      <rect x="-46" y="-46" width="92" height="92"/>
+      <rect x="-46" y="-46" width="92" height="92" transform="rotate(45)"/>
+    </g>
+    <g fill="#0f766e">
+      <rect x="-22" y="-22" width="44" height="44"/>
+      <rect x="-22" y="-22" width="44" height="44" transform="rotate(45)"/>
+    </g>
   </g>
 </svg>

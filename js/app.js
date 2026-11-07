@@ -122,6 +122,7 @@ function loadDay(date) {
 
 // ---------- day view ----------
 
+const STEP = { rawatib: 2, dhuha: 2 }; // + button increment (default 1)
 const COUNT_FIELD = { rawatib: 'rawatib_rakaat', dhuha: 'dhuha_rakaat', witr: 'witir_rakaat' };
 
 function getCount(key) {
@@ -161,7 +162,7 @@ function counterCard(key, title, hint) {
       h('input', {
         class: 'count-input' + (value === null ? ' unset' : ''),
         type: 'text', inputmode: 'numeric', pattern: '[0-9]*', autocomplete: 'off',
-        placeholder: 'Not recorded', value: value === null ? '' : String(value),
+        placeholder: '0', value: value === null ? '' : String(value),
         'data-key': key, 'data-fid': `in-${key}`, 'aria-label': `${title} (${unit})`,
       }),
       h('button', { type: 'button', class: 'step-btn', 'data-act': 'inc', 'data-key': key, 'data-fid': `inc-${key}`, 'aria-label': `Increase ${title}` }, '+')),
@@ -663,7 +664,7 @@ function onClick(e) {
       return render();
     case 'inc': {
       const v = getCount(key);
-      setCount(key, v === null ? 1 : Math.min(AmalStore.MAX_COUNT, v + 1));
+      setCount(key, Math.min(AmalStore.MAX_COUNT, (v ?? 0) + (STEP[key] || 1)));
       return render();
     }
     case 'dec': {

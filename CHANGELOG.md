@@ -9,6 +9,13 @@ The version shown in the app's Settings → About panel is read from the latest
 entry below (see `loadAppVersion()` in `js/app.js`), so this file is the single
 source of truth for the app version.
 
+## [0.4.0] - 2026-11-08
+
+### Changed
+- Rawatib, Dhuha and Quran reading show 0 instead of "Not recorded" on an empty day (nothing is saved until you enter a value).
+- "+" on Rawatib and Dhuha adds 2 rakaat per tap.
+- New eight-point star in the app icon.
+
 ## [0.3.3] - 2026-11-06
 
 ### Added
