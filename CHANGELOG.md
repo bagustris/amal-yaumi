@@ -9,11 +9,22 @@ The version shown in the app's Settings → About panel is read from the latest
 entry below (see `loadAppVersion()` in `js/app.js`), so this file is the single
 source of truth for the app version.
 
+## [0.4.2] - 2026-11-08
+
+### Changed
+- History calendar dots grow with the share of shown activities done that day.
+
+## [0.4.1] - 2026-11-08
+
+### Changed
+- Prayers default to "Not performed", fasting to "Did not fast" and infaq to "Not done" (Witr and the other counters show 0). Defaults apply to untouched, shown items on a day you have logged (Quran reading shows 0 but is not counted by default); days with no record stay out of history and summaries.
+- Removed the "Not recorded" prayer option; tap an active Fasted / Did not fast / Done / Not done button again to return to the default.
+
 ## [0.4.0] - 2026-11-08
 
 ### Changed
 - Rawatib, Dhuha and Quran reading show 0 instead of "Not recorded" on an empty day (nothing is saved until you enter a value).
-- "+" on Rawatib and Dhuha adds 2 rakaat per tap.
+- "+" and "−" on Rawatib and Dhuha change the count by 2 rakaat per tap.
 - New eight-point star in the app icon.
 
 ## [0.3.3] - 2026-11-06

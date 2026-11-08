@@ -122,7 +122,23 @@ function loadDay(date) {
 
 // ---------- day view ----------
 
-const STEP = { rawatib: 2, dhuha: 2 }; // + button increment (default 1)
+const STEP = { rawatib: 2, dhuha: 2 }; // +/− button increment (default 1)
+// Defaults apply to untouched items of a logged day, for activities that are shown.
+// Stored records keep null for "never touched"; days with no record stay unrecorded.
+// Quran reading is not defaulted here: its unit is per entry, so a default would depend on
+// the current unit setting (the editor still shows 0).
+function resolveDay(d) {
+  const on = (k) => SettingsManager.get(k);
+  const r = { ...d, prayers: { ...d.prayers }, fasting: { ...d.fasting }, infaq: { ...d.infaq } };
+  for (const n of AmalStore.PRAYERS) r.prayers[n] ??= 'not_performed';
+  if (on('showRawatib')) r.rawatib_rakaat ??= 0;
+  if (on('showDhuha')) r.dhuha_rakaat ??= 0;
+  if (on('showWitr')) r.witir_rakaat ??= 0;
+  if (on('showFasting')) r.fasting.status ??= 'did_not_fast';
+  if (on('showInfaq')) r.infaq.done ??= false;
+  return r;
+}
+
 const COUNT_FIELD = { rawatib: 'rawatib_rakaat', dhuha: 'dhuha_rakaat', witr: 'witir_rakaat' };
 
 function getCount(key) {
@@ -144,7 +160,8 @@ function setCount(key, value) {
 }
 
 function counterCard(key, title, hint) {
-  const value = getCount(key);
+  const stored = getCount(key);
+  const value = stored ?? 0;
   const unit = key === 'quran' ? quranUnit() : 'rakaat';
   const quick = key === 'quran' ? QUICK[unit] : QUICK[key];
   return h('section', { class: 'card counter' },
@@ -160,9 +177,9 @@ function counterCard(key, title, hint) {
     h('div', { class: 'stepper' },
       h('button', { type: 'button', class: 'step-btn', 'data-act': 'dec', 'data-key': key, 'data-fid': `dec-${key}`, 'aria-label': `Decrease ${title}` }, '−'),
       h('input', {
-        class: 'count-input' + (value === null ? ' unset' : ''),
+        class: 'count-input' + (stored === null ? ' unset' : ''),
         type: 'text', inputmode: 'numeric', pattern: '[0-9]*', autocomplete: 'off',
-        placeholder: '0', value: value === null ? '' : String(value),
+        placeholder: '0', value: String(value),
         'data-key': key, 'data-fid': `in-${key}`, 'aria-label': `${title} (${unit})`,
       }),
       h('button', { type: 'button', class: 'step-btn', 'data-act': 'inc', 'data-key': key, 'data-fid': `inc-${key}`, 'aria-label': `Increase ${title}` }, '+')),
@@ -171,33 +188,33 @@ function counterCard(key, title, hint) {
         type: 'button', class: 'chip' + (value === q ? ' on' : ''), 'aria-pressed': String(value === q),
         'data-act': 'set', 'data-key': key, 'data-val': q, 'data-fid': `q-${key}-${q}`,
       }, String(q))),
-      value !== null && h('button', { type: 'button', class: 'chip clear', 'data-act': 'clear', 'data-key': key, 'data-fid': `clr-${key}` }, 'Clear')),
-    key === 'quran' && value !== null && h('p', { class: 'hint-text', text: 'Changing the unit clears this day’s value, since it can’t be converted.' }));
+      stored !== null && h('button', { type: 'button', class: 'chip clear', 'data-act': 'clear', 'data-key': key, 'data-fid': `clr-${key}` }, 'Clear')),
+    key === 'quran' && stored !== null && h('p', { class: 'hint-text', text: 'Changing the unit clears this day’s value, since it can’t be converted.' }));
 }
 
 function prayersCard() {
+  const resolved = resolveDay(state.day);
   const rows = AmalStore.PRAYERS.map((name) => {
-    const val = state.day.prayers[name];
+    const val = resolved.prayers[name];
     const open = state.openPrayer === name;
     const row = h('div', { class: 'prayer' + (open ? ' open' : '') },
       h('div', { class: 'prayer-row' },
         h('span', { class: 'prayer-name', text: PRAYER_LABELS[name] }),
         h('button', {
-          type: 'button', class: 'state-btn ' + (val ? 's-' + val : 's-none'),
+          type: 'button', class: 'state-btn s-' + val,
           'data-act': 'toggle-prayer', 'data-prayer': name, 'data-fid': `pr-${name}`,
           'aria-expanded': String(open), 'aria-controls': `panel-${name}`,
-          'aria-label': `${PRAYER_LABELS[name]}: ${val ? STATE_LABELS[val] : 'Not recorded'}. Change`,
+          'aria-label': `${PRAYER_LABELS[name]}: ${STATE_LABELS[val]}. Change`,
         },
-        h('span', { class: 'sym', 'aria-hidden': 'true', text: val ? STATE_SYMBOL[val] : '' }),
-        h('span', { text: val ? STATE_LABELS[val] : 'Not recorded' }),
+        h('span', { class: 'sym', 'aria-hidden': 'true', text: STATE_SYMBOL[val] }),
+        h('span', { text: STATE_LABELS[val] }),
         h('span', { class: 'chev', 'aria-hidden': 'true', text: '▾' }))));
     if (open) {
       row.append(h('div', { class: 'choices', id: `panel-${name}` },
         AmalStore.PRAYER_STATES.map((st) => h('button', {
           type: 'button', class: 'choice s-' + st + (val === st ? ' on' : ''), 'aria-pressed': String(val === st),
           'data-act': 'pick-prayer', 'data-prayer': name, 'data-val': st, 'data-fid': `pick-${name}-${st}`,
-        }, h('span', { class: 'sym', 'aria-hidden': 'true', text: STATE_SYMBOL[st] }), STATE_LABELS[st])),
-        h('button', { type: 'button', class: 'choice s-none' + (val === null ? ' on' : ''), 'aria-pressed': String(val === null), 'data-act': 'pick-prayer', 'data-prayer': name, 'data-val': '', 'data-fid': `pick-${name}-none` }, 'Not recorded')));
+        }, h('span', { class: 'sym', 'aria-hidden': 'true', text: STATE_SYMBOL[st] }), STATE_LABELS[st]))));
     }
     return row;
   });
@@ -209,7 +226,7 @@ function segButton(label, pressed, attrs) {
 }
 
 function fastingCard() {
-  const f = state.day.fasting;
+  const f = resolveDay(state.day).fasting;
   return h('section', { class: 'card' },
     h('div', { class: 'row-head' }, h('h3', { text: 'Fasting' })),
     h('div', { class: 'seg-group' },
@@ -224,7 +241,8 @@ function fastingCard() {
 }
 
 function infaqCard(settings) {
-  const i = state.day.infaq;
+  const i = resolveDay(state.day).infaq;
+  const amount = state.day.infaq.amount;
   return h('section', { class: 'card' },
     h('div', { class: 'row-head' }, h('h3', { text: 'Infaq' })),
     h('div', { class: 'seg-group' },
@@ -234,7 +252,7 @@ function infaqCard(settings) {
       h('span', { class: 'chips-label', text: `Amount (optional, ${settings.currency || 'no currency'})` }),
       h('input', {
         class: 'text-input', type: 'text', inputmode: 'decimal', autocomplete: 'off',
-        placeholder: 'Not recorded', value: i.amount === null ? '' : String(i.amount), 'data-fid': 'in-amount', id: 'infaq-amount',
+        placeholder: 'Not recorded', value: amount === null ? '' : String(amount), 'data-fid': 'in-amount', id: 'infaq-amount',
       })));
 }
 
@@ -346,15 +364,17 @@ function calendarNodes() {
     const key = startKey.slice(0, 8) + String(n).padStart(2, '0');
     const future = key > today();
     const rec = AmalStore.has(key);
+    const dot = rec ? dotSize(AmalStore.get(key), s) : null;
     cells.push(h('button', {
       type: 'button', class: 'cell' + (rec ? ' rec' : '') + (key === today() ? ' today' : ''),
+      style: dot ? `--dot:${dot}px` : null,
       'data-act': 'open-day', 'data-val': key, disabled: future,
       'aria-label': `${fmtLong(key)}${rec ? ', has records' : ', no records'}`,
     }, String(n)));
   }
 
   const [from, to] = periodRange();
-  const inRange = AmalStore.all().filter((d) => d.date >= from && d.date <= to);
+  const inRange = AmalStore.all().filter((d) => d.date >= from && d.date <= to).map(resolveDay);
   const sum = summarize(inRange, s);
   const periodLabel = state.period === 'all'
     ? 'All time'
@@ -399,7 +419,7 @@ function calendarNodes() {
       h('h2', { class: 'month-title', text: monthName, 'aria-live': 'polite' }),
       h('button', { type: 'button', class: 'step-btn', 'data-act': 'month-next', 'data-fid': 'month-next', 'aria-label': 'Next month', disabled: atCurrent }, '›')),
     h('div', { class: 'calendar card' }, cells),
-    h('p', { class: 'hint-text center', text: 'A dot means something was recorded that day. Days without a dot are simply not recorded.' }),
+    h('p', { class: 'hint-text center', text: 'A dot means the day was logged; a bigger dot means more of the shown activities were done. Days without a dot are not recorded.' }),
     h('div', { class: 'group' },
       h('h2', { class: 'group-title', text: 'Summary' }),
       h('div', { class: 'seg-group' }, periodBtn('month', atCurrent ? 'This month' : new Date(y, m, 1).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })), periodBtn('week', 'Last 7 days'), periodBtn('all', 'All time')),
@@ -409,8 +429,9 @@ function calendarNodes() {
 
 
 // ---------- trends ----------
-// Self-reflection (muhasabah), not a score: averages use recorded days only,
-// unrecorded days are never counted as zero, and nothing is ranked or colored good/bad.
+// Self-reflection (muhasabah), not a score: averages use logged days only (days with no
+// record are never counted); untouched items inside a logged day count as their default.
+// Nothing is ranked or colored good/bad.
 
 const GRANS = { day: { n: 14, label: 'Days' }, week: { n: 8, label: 'Weeks' }, month: { n: 6, label: 'Months' } };
 const STACK = ['mosque_jamaah', 'other_jamaah', 'alone', 'not_performed'];
@@ -487,7 +508,7 @@ function availableMetrics(s, all) {
 
 function trendsNodes() {
   const s = SettingsManager.load();
-  const all = AmalStore.all();
+  const all = AmalStore.all().map(resolveDay);
   const ids = availableMetrics(s, all);
   if (!ids.includes(state.metric)) state.metric = 'prayers';
   const isPr = state.metric === 'prayers';
@@ -587,10 +608,10 @@ function trendsNodes() {
     out.push(h('div', { class: 'card chart' },
       h('h3', { class: 'chart-title', text: `Distribution by prayer · ${fmtShort(from)} – ${fmtShortY(to > today() ? today() : to)}` }),
       rows,
-      h('p', { class: 'hint-text', text: 'Number on the right = days recorded for that prayer.' })));
+      h('p', { class: 'hint-text', text: 'Number on the right = logged days counted for that prayer.' })));
   }
 
-  out.push(h('p', { class: 'hint-text center', text: 'For reflection, not a score. Averages count recorded days only; unrecorded days are never counted as zero.' }));
+  out.push(h('p', { class: 'hint-text center', text: 'For reflection, not a score. Averages count logged days only; days with no record are never counted. Items you did not touch on a logged day count as their default.' }));
 
   const gran = h('div', { class: 'seg-group' }, Object.entries(GRANS).map(([id, g]) =>
     segButton(g.label, state.gran === id, { 'data-act': 'gran', 'data-val': id, 'data-fid': `gran-${id}` })));
@@ -659,7 +680,7 @@ function onClick(e) {
       state.openPrayer = state.openPrayer === t.dataset.prayer ? null : t.dataset.prayer;
       return render();
     case 'pick-prayer':
-      mutate((d) => { d.prayers[t.dataset.prayer] = val || null; });
+      mutate((d) => { d.prayers[t.dataset.prayer] = val; });
       state.openPrayer = null;
       return render();
     case 'inc': {
@@ -669,7 +690,7 @@ function onClick(e) {
     }
     case 'dec': {
       const v = getCount(key);
-      setCount(key, v === null ? 0 : Math.max(0, v - 1));
+      setCount(key, v === null ? 0 : Math.max(0, v - (STEP[key] || 1)));
       return render();
     }
     case 'set':
@@ -680,7 +701,7 @@ function onClick(e) {
       return render();
     case 'fast':
       mutate((d) => {
-        d.fasting = d.fasting.status === val ? { status: null, type: null } : { status: val, type: null };
+        d.fasting = (d.fasting.status ?? 'did_not_fast') === val ? { status: null, type: null } : { status: val, type: null };
       });
       return render();
     case 'fast-type':
@@ -689,7 +710,7 @@ function onClick(e) {
     case 'infaq': {
       const done = val === 'true';
       mutate((d) => {
-        d.infaq = d.infaq.done === done ? { done: null, amount: null, currency: null } : { done, amount: null, currency: null };
+        d.infaq = (d.infaq.done ?? false) === done ? { done: null, amount: null, currency: null } : { done, amount: null, currency: null };
       });
       return render();
     }

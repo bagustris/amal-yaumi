@@ -581,8 +581,9 @@ button:disabled { opacity: 0.4; cursor: default; }
 .cell:hover:not(:disabled) { border-color: var(--accent); }
 .cell.today { border-color: var(--gold); font-weight: 700; }
 .cell.rec::after {
-  content: ''; position: absolute; left: 50%; bottom: 5px; width: 6px; height: 6px;
-  margin-left: -3px; border-radius: 50%; background: var(--accent);
+  content: ''; position: absolute; left: 50%; bottom: 3px;
+  width: var(--dot, 6px); height: var(--dot, 6px);
+  margin-left: calc(var(--dot, 6px) / -2); border-radius: 50%; background: var(--accent);
 }
 .cell:disabled { opacity: 0.3; }
 
