@@ -1,7 +1,7 @@
 # Amal Yaumi
 
 A small, private, offline daily worship log (static PWA, no build step, no accounts, no network use).
-See [PLAN.md](PLAN.md) for the product principles: it is a logbook, not a score — no streaks, points or rankings.
+See [PLAN.md](PLAN.md) for the product principles: it is a private logbook with one reflective daily score (see PLAN.md) — no streaks, badges, rankings or sharing.
 
 ## Run
 
