@@ -16,7 +16,7 @@ Design priorities, in order:
 4. Simple history and factual summaries.
 5. No unnecessary religious content, social features, or gamification.
 
-> **Amended 2026-11-08:** to minimise effort, untouched items of a *logged day* resolve to a default (prayers: not performed, counters: 0, fasting: did not fast, infaq: not done) in the editor, history and trends. Stored records still keep `null` for untouched items, and days with no record remain unrecorded and are never counted.
+> **Amended 2026-11-19:** untouched items of a *logged day* are only *displayed* as a default in the editor (prayers: qadha, counters: 0, fasting: did not fast, infaq: not done). Stored records keep `null`, and history, summaries and trends count only what was explicitly recorded.
 
 ## 2. Review of similar apps
 
@@ -54,7 +54,7 @@ Use four explicit states:
 | `mosque_jamaah` | Mosque jamaah | Performed in congregation at a mosque |
 | `other_jamaah` | Jamaah elsewhere | Performed in congregation outside a mosque |
 | `alone` | Alone | Performed individually |
-| `not_performed` | Not performed | User explicitly records that the prayer was not performed |
+| `not_performed` | Not performed (shown as “Qadha” in the UI; qada is not tracked separately) | User explicitly records that the prayer was not performed |
 | `null` | Not recorded | No status has been entered |
 
 This preserves the user's distinction between congregation at a mosque and congregation elsewhere, while avoiding the mistake of interpreting an empty field as a missed prayer. Use text labels in the selection UI; symbols may supplement them but must not carry the meaning alone.
@@ -303,3 +303,7 @@ The MVP is ready when:
 ## 12. Main product decision
 
 Do not try to become an all-in-one Islamic app. The strongest positioning is a **small, private amal log**: five prayer records, a few simple counters, Quran reading, fasting, and infaq. Borrow the quick-entry, user-selected activities, history, and backup patterns from existing apps—but keep the interface and scope substantially smaller.
+
+## Daily score (amended 2026-11-19)
+
+The earlier "no scores" rule is relaxed for one private, reflective measure: a daily score out of 100 over the activities the user tracks (prayers 60%: mosque jamaah 12, jamaah elsewhere 10, alone 8, qadha 0 each; Rawatib 8, Dhuha 6, Witr 6, Quran 10, fasting 5, infaq 5, scaled to the shown activities). Only explicitly recorded values earn points. Unlogged days are skipped, never counted as zero. The Trends "Growth" card shows the cumulative total and the 7-day average against the previous 7 days; calendar dot size follows the day score. No streaks, badges, rankings or sharing. Weights live in `SCORE` in `js/app.js`.
