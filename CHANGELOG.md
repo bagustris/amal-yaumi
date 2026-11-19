@@ -9,6 +9,22 @@ The version shown in the app's Settings → About panel is read from the latest
 entry below (see `loadAppVersion()` in `js/app.js`), so this file is the single
 source of truth for the app version.
 
+## [0.4.3] - 2026-11-19
+
+### Changed
+- The prayer state "Not performed" is now labelled "Qadha".
+- Rawatib quick-pick adds 14.
+- Days with no record show real (unset) values in the editor instead of defaults; defaults apply once the day is logged.
+- Tap a selected prayer state again to reset it.
+- Calendar dot size is capped (6–12px) and the day's cell label reports the share of activities done.
+
+### Fixed
+- Summary and Trends count only explicitly recorded items again; editor defaults are display-only.
+- History calendar crashed because `dotSize` was missing.
+- "−" on an unset counter and re-tapping a default fasting/infaq button no longer create or touch a record.
+- Settings are read once per summary/trends render instead of per record.
+- Quran reading shows approximate equivalents (1 page = 2 minutes = 12 ayat) under the counter and as a combined total in the summary. Stored values are not converted.
+
 ## [0.4.2] - 2026-11-08
 
 ### Changed

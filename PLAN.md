@@ -16,7 +16,7 @@ Design priorities, in order:
 4. Simple history and factual summaries.
 5. No unnecessary religious content, social features, or gamification.
 
-> **Amended 2026-11-08:** to minimise effort, untouched items of a *logged day* resolve to a default (prayers: not performed, counters: 0, fasting: did not fast, infaq: not done) in the editor, history and trends. Stored records still keep `null` for untouched items, and days with no record remain unrecorded and are never counted.
+> **Amended 2026-11-19:** untouched items of a *logged day* are only *displayed* as a default in the editor (prayers: qadha, counters: 0, fasting: did not fast, infaq: not done). Stored records keep `null`, and history, summaries and trends count only what was explicitly recorded.
 
 ## 2. Review of similar apps
 

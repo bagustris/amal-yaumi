@@ -19,12 +19,19 @@ const STATE_LABELS = {
   mosque_jamaah: 'Mosque jamaah',
   other_jamaah: 'Jamaah elsewhere',
   alone: 'Alone',
-  not_performed: 'Not performed',
+  not_performed: 'Qadha',
 };
 // Symbols only supplement the text label.
 const STATE_SYMBOL = { mosque_jamaah: '●', other_jamaah: '◐', alone: '○', not_performed: '–' };
+// 1 page = 2 minutes = 12 ayat (approximate; stored values are never converted).
+const PER_PAGE = { pages: 1, minutes: 2, ayat: 12 };
+function quranEquiv(unit, value) {
+  const pages = value / PER_PAGE[unit];
+  return AmalStore.QURAN_UNITS.filter((u) => u !== unit)
+    .map((u) => `${fmtNum(Math.round(pages * PER_PAGE[u] * 10) / 10)} ${u}`).join(' · ');
+}
 const FAST_TYPE_LABELS = { ramadan: 'Ramadan', qada: 'Qada', sunnah: 'Sunnah', other: 'Other' };
-const QUICK = { rawatib: [2, 4, 8, 12], dhuha: [2, 4, 8], witr: [1, 3, 5], ayat: [1, 3, 5, 10], pages: [1, 2, 5, 10, 20], minutes: [5, 10, 15, 30] };
+const QUICK = { rawatib: [2, 4, 8, 12, 14], dhuha: [2, 4, 8], witr: [1, 3, 5], ayat: [1, 3, 5, 10], pages: [1, 2, 5, 10, 20], minutes: [5, 10, 15, 30] };
 
 const ACTIVITIES = [
   { key: 'showRawatib', label: 'Rawatib' },
@@ -120,15 +127,27 @@ function loadDay(date) {
   state.openPrayer = null;
 }
 
+// Share (0–1) of shown activities done that day; drives the calendar dot size.
+function doneShare(d, s) {
+  const items = AmalStore.PRAYERS.map((n) => d.prayers[n] != null && d.prayers[n] !== 'not_performed');
+  const count = (show, v) => { if (show) items.push((v ?? 0) > 0); };
+  count(s.showRawatib, d.rawatib_rakaat);
+  count(s.showDhuha, d.dhuha_rakaat);
+  count(s.showWitr, d.witir_rakaat);
+  count(s.showQuran, d.quran.value);
+  if (s.showFasting) items.push(d.fasting.status === 'fasted');
+  if (s.showInfaq) items.push(d.infaq.done === true);
+  return items.filter(Boolean).length / items.length;
+}
+
 // ---------- day view ----------
 
 const STEP = { rawatib: 2, dhuha: 2 }; // +/− button increment (default 1)
-// Defaults apply to untouched items of a logged day, for activities that are shown.
-// Stored records keep null for "never touched"; days with no record stay unrecorded.
-// Quran reading is not defaulted here: its unit is per entry, so a default would depend on
-// the current unit setting (the editor still shows 0).
-function resolveDay(d) {
-  const on = (k) => SettingsManager.get(k);
+// Editor display only: untouched items of a logged day are shown as their default.
+// Stored records keep null for "never touched", and history/summary/trends count only
+// what was explicitly recorded. Quran isn't defaulted (its unit is stored per entry).
+function resolveDay(d, s = SettingsManager.load()) {
+  const on = (k) => s[k];
   const r = { ...d, prayers: { ...d.prayers }, fasting: { ...d.fasting }, infaq: { ...d.infaq } };
   for (const n of AmalStore.PRAYERS) r.prayers[n] ??= 'not_performed';
   if (on('showRawatib')) r.rawatib_rakaat ??= 0;
@@ -189,13 +208,20 @@ function counterCard(key, title, hint) {
         'data-act': 'set', 'data-key': key, 'data-val': q, 'data-fid': `q-${key}-${q}`,
       }, String(q))),
       stored !== null && h('button', { type: 'button', class: 'chip clear', 'data-act': 'clear', 'data-key': key, 'data-fid': `clr-${key}` }, 'Clear')),
+    key === 'quran' && stored !== null && stored > 0 && h('p', { class: 'hint-text', text: `≈ ${quranEquiv(unit, stored)}` }),
     key === 'quran' && stored !== null && h('p', { class: 'hint-text', text: 'Changing the unit clears this day’s value, since it can’t be converted.' }));
 }
 
+// Defaults apply only once the day has a record; an unlogged day shows what is really stored.
+function shownDay() {
+  return AmalStore.has(state.date) ? resolveDay(state.day) : state.day;
+}
+
 function prayersCard() {
-  const resolved = resolveDay(state.day);
+  const resolved = shownDay();
   const rows = AmalStore.PRAYERS.map((name) => {
     const val = resolved.prayers[name];
+    const label = val === null ? 'Not recorded' : STATE_LABELS[val];
     const open = state.openPrayer === name;
     const row = h('div', { class: 'prayer' + (open ? ' open' : '') },
       h('div', { class: 'prayer-row' },
@@ -204,17 +230,18 @@ function prayersCard() {
           type: 'button', class: 'state-btn s-' + val,
           'data-act': 'toggle-prayer', 'data-prayer': name, 'data-fid': `pr-${name}`,
           'aria-expanded': String(open), 'aria-controls': `panel-${name}`,
-          'aria-label': `${PRAYER_LABELS[name]}: ${STATE_LABELS[val]}. Change`,
+          'aria-label': `${PRAYER_LABELS[name]}: ${label}. Change`,
         },
-        h('span', { class: 'sym', 'aria-hidden': 'true', text: STATE_SYMBOL[val] }),
-        h('span', { text: STATE_LABELS[val] }),
+        h('span', { class: 'sym', 'aria-hidden': 'true', text: STATE_SYMBOL[val] ?? '·' }),
+        h('span', { text: label }),
         h('span', { class: 'chev', 'aria-hidden': 'true', text: '▾' }))));
     if (open) {
       row.append(h('div', { class: 'choices', id: `panel-${name}` },
         AmalStore.PRAYER_STATES.map((st) => h('button', {
           type: 'button', class: 'choice s-' + st + (val === st ? ' on' : ''), 'aria-pressed': String(val === st),
           'data-act': 'pick-prayer', 'data-prayer': name, 'data-val': st, 'data-fid': `pick-${name}-${st}`,
-        }, h('span', { class: 'sym', 'aria-hidden': 'true', text: STATE_SYMBOL[st] }), STATE_LABELS[st]))));
+        }, h('span', { class: 'sym', 'aria-hidden': 'true', text: STATE_SYMBOL[st] }), STATE_LABELS[st])),
+        h('p', { class: 'hint-text', text: 'Tap the selected option again to reset.' })));
     }
     return row;
   });
@@ -226,7 +253,7 @@ function segButton(label, pressed, attrs) {
 }
 
 function fastingCard() {
-  const f = resolveDay(state.day).fasting;
+  const f = shownDay().fasting;
   return h('section', { class: 'card' },
     h('div', { class: 'row-head' }, h('h3', { text: 'Fasting' })),
     h('div', { class: 'seg-group' },
@@ -241,7 +268,7 @@ function fastingCard() {
 }
 
 function infaqCard(settings) {
-  const i = resolveDay(state.day).infaq;
+  const i = shownDay().infaq;
   const amount = state.day.infaq.amount;
   return h('section', { class: 'card' },
     h('div', { class: 'row-head' }, h('h3', { text: 'Infaq' })),
@@ -360,21 +387,23 @@ function calendarNodes() {
   const cells = wd.map((w) => h('span', { class: 'wd', 'aria-hidden': 'true', text: w[0] }));
   for (let i = 0; i < first; i++) cells.push(h('span'));
   const [startKey] = monthRange(y, m);
+  const byDate = new Map(AmalStore.all().map((d) => [d.date, d]));
   for (let n = 1; n <= count; n++) {
     const key = startKey.slice(0, 8) + String(n).padStart(2, '0');
     const future = key > today();
-    const rec = AmalStore.has(key);
-    const dot = rec ? dotSize(AmalStore.get(key), s) : null;
+    const rec = byDate.get(key);
+    const share = rec ? doneShare(rec, s) : null;
+    const dot = rec ? 6 + Math.round(6 * share) : null;
     cells.push(h('button', {
       type: 'button', class: 'cell' + (rec ? ' rec' : '') + (key === today() ? ' today' : ''),
       style: dot ? `--dot:${dot}px` : null,
       'data-act': 'open-day', 'data-val': key, disabled: future,
-      'aria-label': `${fmtLong(key)}${rec ? ', has records' : ', no records'}`,
+      'aria-label': `${fmtLong(key)}${rec ? `, has records, ${Math.round(share * 100)}% of activities done` : ', no records'}`,
     }, String(n)));
   }
 
   const [from, to] = periodRange();
-  const inRange = AmalStore.all().filter((d) => d.date >= from && d.date <= to).map(resolveDay);
+  const inRange = AmalStore.all().filter((d) => d.date >= from && d.date <= to);
   const sum = summarize(inRange, s);
   const periodLabel = state.period === 'all'
     ? 'All time'
@@ -398,6 +427,8 @@ function calendarNodes() {
     if (sum.quran.ayat) stats.push(statRow('Ayat', fmtNum(sum.quran.ayat)));
     if (sum.quran.pages) stats.push(statRow('Pages', fmtNum(sum.quran.pages)));
     if (sum.quran.minutes) stats.push(statRow('Minutes', fmtNum(sum.quran.minutes)));
+    const qPages = Object.keys(PER_PAGE).reduce((a, u) => a + sum.quran[u] / PER_PAGE[u], 0);
+    if (qPages) stats.push(statRow('Combined (approx.)', AmalStore.QURAN_UNITS.map((u) => `${fmtNum(Math.round(qPages * PER_PAGE[u] * 10) / 10)} ${u}`).join(' · ')));
   }
   if (s.showFasting && (sum.fasted || sum.notFasted)) {
     stats.push(h('h3', { class: 'sum-title', text: 'Fasting' }), statRow('Days fasted', String(sum.fasted)));
@@ -508,7 +539,7 @@ function availableMetrics(s, all) {
 
 function trendsNodes() {
   const s = SettingsManager.load();
-  const all = AmalStore.all().map(resolveDay);
+  const all = AmalStore.all();
   const ids = availableMetrics(s, all);
   if (!ids.includes(state.metric)) state.metric = 'prayers';
   const isPr = state.metric === 'prayers';
@@ -680,7 +711,7 @@ function onClick(e) {
       state.openPrayer = state.openPrayer === t.dataset.prayer ? null : t.dataset.prayer;
       return render();
     case 'pick-prayer':
-      mutate((d) => { d.prayers[t.dataset.prayer] = val; });
+      mutate((d) => { d.prayers[t.dataset.prayer] = d.prayers[t.dataset.prayer] === val ? null : val; });
       state.openPrayer = null;
       return render();
     case 'inc': {
@@ -690,7 +721,8 @@ function onClick(e) {
     }
     case 'dec': {
       const v = getCount(key);
-      setCount(key, v === null ? 0 : Math.max(0, v - (STEP[key] || 1)));
+      if (v === null) return; // nothing to decrement; don't create a record
+      setCount(key, Math.max(0, v - (STEP[key] || 1)));
       return render();
     }
     case 'set':
@@ -700,8 +732,9 @@ function onClick(e) {
       setCount(key, null);
       return render();
     case 'fast':
+      if (state.day.fasting.status === null && val === 'did_not_fast') return; // already the default
       mutate((d) => {
-        d.fasting = (d.fasting.status ?? 'did_not_fast') === val ? { status: null, type: null } : { status: val, type: null };
+        d.fasting = d.fasting.status === val ? { status: null, type: null } : { status: val, type: null };
       });
       return render();
     case 'fast-type':
@@ -709,8 +742,9 @@ function onClick(e) {
       return render();
     case 'infaq': {
       const done = val === 'true';
+      if (state.day.infaq.done === null && !done) return; // already the default
       mutate((d) => {
-        d.infaq = (d.infaq.done ?? false) === done ? { done: null, amount: null, currency: null } : { done, amount: null, currency: null };
+        d.infaq = d.infaq.done === done ? { done: null, amount: null, currency: null } : { done, amount: null, currency: null };
       });
       return render();
     }
