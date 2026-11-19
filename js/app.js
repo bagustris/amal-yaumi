@@ -461,7 +461,7 @@ function calendarNodes() {
 
 // ---------- trends ----------
 // Self-reflection (muhasabah), not a score: averages use logged days only (days with no
-// record are never counted); untouched items inside a logged day count as their default.
+// record are never counted); untouched items inside a logged day are not counted either.
 // Nothing is ranked or colored good/bad.
 
 const GRANS = { day: { n: 14, label: 'Days' }, week: { n: 8, label: 'Weeks' }, month: { n: 6, label: 'Months' } };
@@ -642,7 +642,7 @@ function trendsNodes() {
       h('p', { class: 'hint-text', text: 'Number on the right = logged days counted for that prayer.' })));
   }
 
-  out.push(h('p', { class: 'hint-text center', text: 'For reflection, not a score. Averages count logged days only; days with no record are never counted. Items you did not touch on a logged day count as their default.' }));
+  out.push(h('p', { class: 'hint-text center', text: 'For reflection, not a score. Averages count logged days only; days with no record are never counted. Items you did not touch on a logged day are not counted.' }));
 
   const gran = h('div', { class: 'seg-group' }, Object.entries(GRANS).map(([id, g]) =>
     segButton(g.label, state.gran === id, { 'data-act': 'gran', 'data-val': id, 'data-fid': `gran-${id}` })));
@@ -711,8 +711,13 @@ function onClick(e) {
       state.openPrayer = state.openPrayer === t.dataset.prayer ? null : t.dataset.prayer;
       return render();
     case 'pick-prayer':
-      mutate((d) => { d.prayers[t.dataset.prayer] = d.prayers[t.dataset.prayer] === val ? null : val; });
-      state.openPrayer = null;
+      {
+        const cur = state.day.prayers[t.dataset.prayer];
+        state.openPrayer = null;
+        // On a logged day an untouched prayer is shown as not_performed; re-picking it is a no-op.
+        if (cur === null && val === 'not_performed' && AmalStore.has(state.date)) return render();
+        mutate((d) => { d.prayers[t.dataset.prayer] = cur === val ? null : val; });
+      }
       return render();
     case 'inc': {
       const v = getCount(key);
@@ -732,7 +737,7 @@ function onClick(e) {
       setCount(key, null);
       return render();
     case 'fast':
-      if (state.day.fasting.status === null && val === 'did_not_fast') return; // already the default
+      if (AmalStore.has(state.date) && state.day.fasting.status === null && val === 'did_not_fast') return; // shown as default on a logged day
       mutate((d) => {
         d.fasting = d.fasting.status === val ? { status: null, type: null } : { status: val, type: null };
       });
@@ -742,7 +747,7 @@ function onClick(e) {
       return render();
     case 'infaq': {
       const done = val === 'true';
-      if (state.day.infaq.done === null && !done) return; // already the default
+      if (AmalStore.has(state.date) && state.day.infaq.done === null && !done) return; // shown as default on a logged day
       mutate((d) => {
         d.infaq = d.infaq.done === done ? { done: null, amount: null, currency: null } : { done, amount: null, currency: null };
       });

@@ -54,7 +54,7 @@ Use four explicit states:
 | `mosque_jamaah` | Mosque jamaah | Performed in congregation at a mosque |
 | `other_jamaah` | Jamaah elsewhere | Performed in congregation outside a mosque |
 | `alone` | Alone | Performed individually |
-| `not_performed` | Not performed | User explicitly records that the prayer was not performed |
+| `not_performed` | Not performed (shown as “Qadha” in the UI; qada is not tracked separately) | User explicitly records that the prayer was not performed |
 | `null` | Not recorded | No status has been entered |
 
 This preserves the user's distinction between congregation at a mosque and congregation elsewhere, while avoiding the mistake of interpreting an empty field as a missed prayer. Use text labels in the selection UI; symbols may supplement them but must not carry the meaning alone.
