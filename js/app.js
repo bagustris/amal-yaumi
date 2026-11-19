@@ -127,18 +127,31 @@ function loadDay(date) {
   state.openPrayer = null;
 }
 
-// Share (0–1) of shown activities done that day; drives the calendar dot size.
-function doneShare(d, s) {
-  const items = AmalStore.PRAYERS.map((n) => d.prayers[n] != null && d.prayers[n] !== 'not_performed');
-  const count = (show, v) => { if (show) items.push((v ?? 0) > 0); };
-  count(s.showRawatib, d.rawatib_rakaat);
-  count(s.showDhuha, d.dhuha_rakaat);
-  count(s.showWitr, d.witir_rakaat);
-  count(s.showQuran, d.quran.value);
-  if (s.showFasting) items.push(d.fasting.status === 'fasted');
-  if (s.showInfaq) items.push(d.infaq.done === true);
-  return items.filter(Boolean).length / items.length;
+// Private daily score (0–100) over the activities you track, for reflecting on your own pattern.
+// Points are earned only from explicitly recorded values. Weights are adjustable here.
+const SCORE = {
+  prayer: { mosque_jamaah: 12, other_jamaah: 10, alone: 8, not_performed: 0 }, // per prayer, max 12
+  rawatib: { max: 8, full: 12 }, dhuha: { max: 6, full: 8 }, witr: { max: 6, full: 3 }, // full = rakaat for max
+  quran: { max: 10, fullPages: 1 }, fasting: 5, infaq: 5,
+};
+// Returns { points, max } for a day, or null when nothing is tracked.
+function dayPoints(d, s) {
+  let points = 0;
+  let max = 5 * SCORE.prayer.mosque_jamaah;
+  for (const n of AmalStore.PRAYERS) points += SCORE.prayer[d.prayers[n]] ?? 0;
+  const counter = (show, cfg, v) => { if (!show) return; max += cfg.max; points += cfg.max * Math.min((v ?? 0) / cfg.full, 1); };
+  counter(s.showRawatib, SCORE.rawatib, d.rawatib_rakaat);
+  counter(s.showDhuha, SCORE.dhuha, d.dhuha_rakaat);
+  counter(s.showWitr, SCORE.witr, d.witir_rakaat);
+  if (s.showQuran) {
+    const pages = d.quran.value === null ? 0 : d.quran.value / PER_PAGE[d.quran.unit];
+    max += SCORE.quran.max; points += SCORE.quran.max * Math.min(pages / SCORE.quran.fullPages, 1);
+  }
+  if (s.showFasting) { max += SCORE.fasting; if (d.fasting.status === 'fasted') points += SCORE.fasting; }
+  if (s.showInfaq) { max += SCORE.infaq; if (d.infaq.done === true) points += SCORE.infaq; }
+  return { points, max };
 }
+const dayScore = (d, s) => { const r = dayPoints(d, s); return Math.round((100 * r.points) / r.max); };
 
 // ---------- day view ----------
 
@@ -392,13 +405,13 @@ function calendarNodes() {
     const key = startKey.slice(0, 8) + String(n).padStart(2, '0');
     const future = key > today();
     const rec = byDate.get(key);
-    const share = rec ? doneShare(rec, s) : null;
-    const dot = rec ? 6 + Math.round(6 * share) : null;
+    const score = rec ? dayScore(rec, s) : null;
+    const dot = rec ? 4 + Math.round(10 * score / 100) : null;
     cells.push(h('button', {
       type: 'button', class: 'cell' + (rec ? ' rec' : '') + (key === today() ? ' today' : ''),
       style: dot ? `--dot:${dot}px` : null,
       'data-act': 'open-day', 'data-val': key, disabled: future,
-      'aria-label': `${fmtLong(key)}${rec ? `, has records, ${Math.round(share * 100)}% of activities done` : ', no records'}`,
+      'aria-label': `${fmtLong(key)}${rec ? `, has records, day score ${score} of 100` : ', no records'}`,
     }, String(n)));
   }
 
@@ -537,6 +550,26 @@ function availableMetrics(s, all) {
   return ids;
 }
 
+function growthCard(s) {
+  const all = AmalStore.all();
+  const score = (d) => dayScore(d, s);
+  const total = all.reduce((a, d) => a + score(d), 0);
+  const t = today();
+  const avg = (from, to) => {
+    const ds = all.filter((d) => d.date >= from && d.date <= to);
+    return ds.length ? ds.reduce((a, d) => a + score(d), 0) / ds.length : null;
+  };
+  const cur = avg(AmalStore.addDays(t, -6), t);
+  const prev = avg(AmalStore.addDays(t, -13), AmalStore.addDays(t, -7));
+  const delta = cur !== null && prev !== null ? Math.round(cur - prev) : null;
+  return h('div', { class: 'card' },
+    h('h3', { class: 'chart-title', text: 'Growth' }),
+    statRow('Last 7 days', cur === null ? 'Not recorded' : `${Math.round(cur)} avg`,
+      delta === null ? 'no earlier week to compare' : `${delta > 0 ? '+' : ''}${delta} vs previous 7 days`),
+    statRow('Cumulative', fmtNum(total), `${all.length} logged day${all.length === 1 ? '' : 's'}`),
+    h('p', { class: 'hint-text', text: 'Private score out of 100 per logged day, from the activities you track (prayers weigh most). Unlogged days are skipped, never counted as zero.' }));
+}
+
 function trendsNodes() {
   const s = SettingsManager.load();
   const all = AmalStore.all();
@@ -642,7 +675,7 @@ function trendsNodes() {
       h('p', { class: 'hint-text', text: 'Number on the right = logged days counted for that prayer.' })));
   }
 
-  out.push(h('p', { class: 'hint-text center', text: 'For reflection, not a score. Averages count logged days only; days with no record are never counted. Items you did not touch on a logged day are not counted.' }));
+  out.push(h('p', { class: 'hint-text center', text: 'For reflection. Averages count logged days only; days with no record are never counted. Items you did not touch on a logged day are not counted.' }));
 
   const gran = h('div', { class: 'seg-group' }, Object.entries(GRANS).map(([id, g]) =>
     segButton(g.label, state.gran === id, { 'data-act': 'gran', 'data-val': id, 'data-fid': `gran-${id}` })));
@@ -650,7 +683,7 @@ function trendsNodes() {
     const label = id === 'prayers' ? 'Prayers' : SINGLE[id].label;
     return h('button', { type: 'button', class: 'chip' + (state.metric === id ? ' on' : ''), 'aria-pressed': String(state.metric === id), 'data-act': 'metric', 'data-val': id, 'data-fid': `m-${id}` }, label);
   }));
-  return [gran, metrics, ...out];
+  return [growthCard(s), gran, metrics, ...out];
 }
 
 function renderHistory() {

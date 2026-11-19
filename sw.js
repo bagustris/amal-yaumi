@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'amal-yaumi-v18';
+const CACHE_VERSION = 'amal-yaumi-v19';
 
 // Explicit list; must mirror every <script>/<link> in index.html.
 // Bump CACHE_VERSION whenever any of these change.

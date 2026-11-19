@@ -18,6 +18,8 @@ source of truth for the app version.
 - Tap a selected prayer state again to reset it.
 - Calendar dot size is capped (6–12px) and the day's cell label reports the share of activities done.
 
+- Daily score (0–100) over tracked activities; Trends gets a Growth card (cumulative total, 7-day average vs previous 7 days). Calendar dot size (4–14px) follows the day score.
+
 ### Fixed
 - Summary and Trends count only explicitly recorded items again; editor defaults are display-only.
 - History calendar crashed because `dotSize` was missing.

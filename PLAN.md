@@ -303,3 +303,7 @@ The MVP is ready when:
 ## 12. Main product decision
 
 Do not try to become an all-in-one Islamic app. The strongest positioning is a **small, private amal log**: five prayer records, a few simple counters, Quran reading, fasting, and infaq. Borrow the quick-entry, user-selected activities, history, and backup patterns from existing apps—but keep the interface and scope substantially smaller.
+
+## Daily score (amended 2026-11-19)
+
+The earlier "no scores" rule is relaxed for one private, reflective measure: a daily score out of 100 over the activities the user tracks (prayers 60%: mosque jamaah 12, jamaah elsewhere 10, alone 8, qadha 0 each; Rawatib 8, Dhuha 6, Witr 6, Quran 10, fasting 5, infaq 5, scaled to the shown activities). Only explicitly recorded values earn points. Unlogged days are skipped, never counted as zero. The Trends "Growth" card shows the cumulative total and the 7-day average against the previous 7 days; calendar dot size follows the day score. No streaks, badges, rankings or sharing. Weights live in `SCORE` in `js/app.js`.
